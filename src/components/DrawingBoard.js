@@ -1,49 +1,36 @@
 import React, { Component } from 'react';
 
 import RangeSlider from './RangeSlider';
-import BackdropImg from '../backdrop.png';
+import Canvas from './Canvas';
 
-import { initImageTexture, setupShaders, clear, draw } from './CanvasOperations';
-
-var gl = window.gl;
-var texture = null;
+import Lasso from './Lasso';
 
 export default class DrawingBoard extends Component {
 
   state = {
-    brightness: 0
+    brightness: 0,
+    lasso: null
   }
 
-  canvasElement = React.createRef();
+  componentDidMount() {
+    this.setState(() => ({ lasso: new Lasso() }));
+  }
 
   updateBrightness = (e) => {
     const newBrightness = e.target.value;
     this.setState((prevState) => ({ brightness: newBrightness }));
   }
 
-  updateCanvas = () => {
-    if (gl) {
-      clear(gl);
-      draw(gl, texture);
-    }
-  }
-
-  componentDidMount() {
-    const canvas = this.canvasElement.current;
-    gl = canvas.getContext('webgl');
-    let img = new Image();
-    img.src = BackdropImg;
-    img.onload = () => {
-      texture = initImageTexture(gl, img);
-      setupShaders(gl);
-      this.updateCanvas();
-    };
-  }
-
   render() {
+    const { lasso, brightness } = this.state;
     return (
       <div>
-        <canvas ref={this.canvasElement} width='512' height='512'>This is a canvas</canvas>
+        <Canvas
+          width='512'
+          height='512'
+          Lasso={lasso}
+          brightness={brightness}
+        />
         <RangeSlider
           name='brightness'
           min='0'
