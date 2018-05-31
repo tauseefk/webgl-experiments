@@ -63,6 +63,8 @@ export const setupShaders = (gl) => {
 
   gl.activeTexture(gl.TEXTURE0);
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+  return program;
 }
 
 export const draw = (gl, texture) => {

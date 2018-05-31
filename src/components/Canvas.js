@@ -10,7 +10,8 @@ export default class Canvas extends Component {
   state = {
     canvas: null,
     glContext: null,
-    imageTexture: null
+    imageTexture: null,
+    shaderProgram: null
   }
   canvasElement = React.createRef();
 
@@ -58,10 +59,23 @@ export default class Canvas extends Component {
       canvas: this.canvasElement.current
     }),
       () => {
-        setupShaders(this.state.glContext);
+        const program = setupShaders(this.state.glContext);
+        this.setState(() => ({ shaderProgram: program }));
         this.loadImageAsTexture();
       });
   }
+
+  componentWillUpdate() {
+    const { glContext, shaderProgram } = this.state;
+    const { brightness } = this.props;
+    if (!glContext || !shaderProgram) return;
+
+    // XXX:TODO abstract webgl calls out of the component, move to canvas operations
+    var uBrightness = glContext.getUniformLocation(shaderProgram, 'uBrightness');
+    glContext.uniform1f(uBrightness, brightness);
+    this.updateCanvasContent();
+  }
+
   render() {
     const { width, height, Lasso } = this.props;
     return (
