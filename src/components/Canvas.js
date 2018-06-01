@@ -65,7 +65,7 @@ export default class Canvas extends Component {
       });
   }
 
-  componentWillUpdate() {
+  componentDidUpdate() {
     const { glContext, shaderProgram } = this.state;
     const { brightness } = this.props;
     if (!glContext || !shaderProgram) return;
