@@ -9,9 +9,17 @@ uniform sampler2D uImage;
 uniform sampler2D uSelection;
 
 varying vec2 vUV;
+varying vec2 vSelectionCoords;
 
 void main() {
-  gl_FragColor = texture2D(uImage, vUV) + vec4(uBrightness, uBrightness, uBrightness, 1);
-  gl_FragColor = texture2D(uSelection, vUV) + vec4(uBrightness, uBrightness, uBrightness, 1);
+  vec3 color = texture2D(uImage, vUV).rgb;
+  vec3 selection = texture2D(uSelection, vSelectionCoords).rgb;
+  if(selection.r == 1.0) { // selected part
+    gl_FragColor.rgb = mix(selection, color, 0.6);
+  } else { // XXX:TODO fix this
+    gl_FragColor = texture2D(uImage, vUV) + vec4(uBrightness, uBrightness, uBrightness, 1);
+  }
+  gl_FragColor.a = 1.0;
+  // gl_FragColor = texture2D(uSelection, vSelectionCoords) + vec4(uBrightness, uBrightness, uBrightness, 1);
 }
 `;

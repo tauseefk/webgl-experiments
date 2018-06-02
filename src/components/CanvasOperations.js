@@ -24,7 +24,7 @@ export const initImageTexture = (gl, image) => {
 };
 
 export const clear = (gl) => {
-  gl.clearColor(1, 1, 0, 1);
+  gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
 }
 
@@ -43,8 +43,6 @@ export const setupShaders = (gl) => {
   gl.attachShader(program, vertShader);
   gl.attachShader(program, fragShader);
 
-  gl.bindAttribLocation(program, 0, 'uPosition');
-
   gl.linkProgram(program);
   gl.useProgram(program);
 
@@ -54,11 +52,24 @@ export const setupShaders = (gl) => {
   var uImage = gl.getUniformLocation(program, 'uImage');
   gl.uniform1i(uImage, 0);
 
+  // binds a vertex index to a variable
+  gl.bindAttribLocation(program, 0, 'uPosition');
+
   var buffer = gl.createBuffer(gl.ARRAY_BUFFER);
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(DATA.positions), gl.STATIC_DRAW);
 
+  /**
+   * turns on the generic vertex attribute array
+   * at the specified index into the list of attribute arrays
+   */
   gl.enableVertexAttribArray(0);
+
+  /**
+   * binds the buffer currently bound to gl.ARRAY_BUFFER
+   * to a generic vertex attribute of the current vertex buffer object
+   * and specifies its layout
+   */
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
   gl.activeTexture(gl.TEXTURE0);
