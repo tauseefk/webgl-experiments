@@ -9,6 +9,7 @@ const DEVICE_PIXEL_RATIO = window.devicePixelRatio || 1;
 export const initImageTexture = (gl, image) => {
   var texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -39,8 +40,8 @@ const compileShader = (gl, type, src) => {
 };
 
 const initRenderTexture = (gl) => {
-  const rTTWidth = gl.drawingBufferWidth / DEVICE_PIXEL_RATIO;
-  const rTTHeight = gl.drawingBufferHeight / DEVICE_PIXEL_RATIO;
+  const rTTWidth = gl.drawingBufferWidth * DEVICE_PIXEL_RATIO;
+  const rTTHeight = gl.drawingBufferHeight * DEVICE_PIXEL_RATIO;
   const rTT = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, rTT);
 
@@ -60,6 +61,19 @@ const initRenderTexture = (gl) => {
   }
 
   return rTT;
+}
+
+const initFrameBuffer = (gl) => {
+  let renderFrameBuffer = gl.createFramebuffer();
+  bindFrambufferAndSetViewport(gl, renderFrameBuffer,
+    gl.drawingBufferWidth * DEVICE_PIXEL_RATIO,
+    gl.drawingBufferHeight * DEVICE_PIXEL_RATIO);
+  return renderFrameBuffer;
+}
+
+const bindFrambufferAndSetViewport = (gl, fb, width, height) => {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.viewport(0, 0, width, height);
 }
 
 var initSelectionTexture = (gl) => {
@@ -83,6 +97,11 @@ var initSelectionTexture = (gl) => {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
   return selectionTexture;
+}
+
+export const updateSelectionState = (gl, program, selectionState) => {
+  const uSelectionState = gl.getUniformLocation(program, 'uSelectionState');
+  gl.uniform1i(uSelectionState, selectionState);
 }
 
 export const setupShaders = (gl) => {
@@ -125,16 +144,11 @@ export const setupShaders = (gl) => {
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
   gl.activeTexture(gl.TEXTURE0);
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  bindFrambufferAndSetViewport(gl, null,
+    gl.drawingBufferWidth * DEVICE_PIXEL_RATIO,
+    gl.drawingBufferHeight * DEVICE_PIXEL_RATIO);
 
   return program;
-}
-
-const initFrameBuffer = (gl) => {
-  let renderFrameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, renderFrameBuffer);
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  return renderFrameBuffer;
 }
 
 export const draw = (gl, texture) => {
@@ -162,7 +176,9 @@ export const drawSelectionToTexture = (gl, selectionPoints) => {
   {
     let selectionTexture = initSelectionTexture(gl);
     gl.bindTexture(gl.TEXTURE_2D, selectionTexture);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    bindFrambufferAndSetViewport(gl, frameBuffer,
+      gl.drawingBufferWidth * DEVICE_PIXEL_RATIO,
+      gl.drawingBufferHeight * DEVICE_PIXEL_RATIO);
   }
 
   gl.enableVertexAttribArray(0);
@@ -184,8 +200,10 @@ export const drawTexture = (gl, rTT) => {
   gl.enableVertexAttribArray(1);
   gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
 
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_2D, rTT);
+  bindFrambufferAndSetViewport(gl, null,
+    gl.drawingBufferWidth * DEVICE_PIXEL_RATIO,
+    gl.drawingBufferHeight * DEVICE_PIXEL_RATIO);
   gl.drawArrays(gl.TRIANGLES, 0, DATA.positions.length / 2);
 }
