@@ -14,7 +14,7 @@ export default class Lasso {
   }
 
   onMouseDown(posX, posY) {
-    this.mousePositions = []; // resetting mousePositions
+    this.resetMousePositions();
     this.startPosition.x = posX;
     this.startPosition.y = posY;
     this.mousePositions.push({
@@ -51,7 +51,17 @@ export default class Lasso {
     return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
   }
 
+  resetMousePositions() {
+    this.mousePositions = [];
+  }
+
   getIsMouseDown() {
     return this.isMouseDown;
+  }
+
+  getIsSelectionComplete() {
+    return (this.mousePositions.length > 10
+      && Math.abs(this.getSquareDistance(this.endPosition,
+        this.startPosition)) < this.closingThreshold * this.closingThreshold);
   }
 }
