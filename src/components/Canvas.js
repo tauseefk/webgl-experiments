@@ -2,10 +2,24 @@ import React, { Component } from 'react';
 
 import BackdropImg from '../backdrop.png';
 
-import { initImageTexture, setupShaders, clear, draw } from './CanvasOperations';
+import {
+  initImageTexture,
+  setupShaders,
+  clear,
+  draw,
+  drawSelectionToTexture,
+  drawTexture,
+  updateSelectionState
+} from './CanvasOperations';
+
 import Utils from './Utils';
 
-var DEVICE_PIXEL_RATIO = window.devicePixelRatio || 1;
+const DEVICE_PIXEL_RATIO = window.devicePixelRatio || 1;
+
+const selectionStateEnum = {
+  SELECTION_PROCESSING: 1,
+  SELECTED: 2
+}
 
 export default class Canvas extends Component {
   state = {
@@ -33,41 +47,54 @@ export default class Canvas extends Component {
   }
 
   handleMouseDown = (e) => {
-    const { canvas, boundingRect } = this.state;
+    const { canvas, glContext, shaderProgram, boundingRect } = this.state;
     const { Lasso } = this.props;
     const mousePosition = {
       x: (e.clientX - boundingRect.left) / canvas.width * DEVICE_PIXEL_RATIO - 1,
       y: -((e.clientY - boundingRect.top) / canvas.height * DEVICE_PIXEL_RATIO - 1)
     }
     Lasso.onMouseDown(mousePosition.x, mousePosition.y);
+
+    updateSelectionState(glContext,
+      shaderProgram,
+      selectionStateEnum.SELECTION_PROCESSING);
   }
 
   handleMouseMove = (e) => {
-    const { canvas, boundingRect } = this.state;
+    const { canvas, boundingRect, glContext } = this.state;
     const { Lasso } = this.props;
     const mousePosition = {
       x: (e.clientX - boundingRect.left) / canvas.width * DEVICE_PIXEL_RATIO - 1,
       y: -((e.clientY - boundingRect.top) / canvas.height * DEVICE_PIXEL_RATIO - 1)
     }
     Lasso.onMouseMove(mousePosition.x, mousePosition.y);
-  }
-
-  handleMouseUp = (e) => {
-    const { glContext } = this.state;
-    const { Lasso } = this.props;
     const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
       .map(point => {
         return [point.x, point.y];
       }));
+    let rTT = drawSelectionToTexture(glContext, selectionPoints);
+    drawTexture(glContext, rTT);
+  }
 
-    // XXX:TODO clean this up
-    let buffer = glContext.createBuffer(glContext.ARRAY_BUFFER);
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, buffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(selectionPoints), glContext.STATIC_DRAW);
-    glContext.enableVertexAttribArray(0);
+  handleMouseUp = (e) => {
+    const { canvas, boundingRect, glContext, shaderProgram } = this.state;
+    const { Lasso } = this.props;
 
-    glContext.vertexAttribPointer(0, 2, glContext.FLOAT, false, 0, 0);
-    glContext.drawArrays(glContext.TRIANGLE_FAN, 0, selectionPoints.length / 2);
+    const mousePosition = {
+      x: (e.clientX - boundingRect.left) / canvas.width * DEVICE_PIXEL_RATIO - 1,
+      y: -((e.clientY - boundingRect.top) / canvas.height * DEVICE_PIXEL_RATIO - 1)
+    }
+    Lasso.onMouseUp(mousePosition.x, mousePosition.y);
+
+    updateSelectionState(glContext,
+      shaderProgram,
+      selectionStateEnum.SELECTED);
+
+    const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
+      .map(point => {
+        return [point.x, point.y];
+      }));
+    drawSelectionToTexture(glContext, selectionPoints);
   }
 
   componentDidMount() {
