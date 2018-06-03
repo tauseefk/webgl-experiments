@@ -9,11 +9,19 @@ export default class DrawingBoard extends Component {
 
   state = {
     brightness: 0,
-    lasso: null
+    lasso: null,
+    isGlobalEdit: true
   }
 
   componentDidMount() {
     this.setState(() => ({ lasso: new Lasso() }));
+  }
+
+  /**
+   * Updates the current edit state
+   */
+  handleEditState = (editState) => {
+    this.setState(() => ({ isGlobalEdit: editState }));
   }
 
   updateBrightness = (e) => {
@@ -22,7 +30,7 @@ export default class DrawingBoard extends Component {
   }
 
   render() {
-    const { lasso, brightness } = this.state;
+    const { lasso, brightness, isGlobalEdit } = this.state;
     return (
       <div>
         <Canvas
@@ -30,6 +38,8 @@ export default class DrawingBoard extends Component {
           height='512'
           Lasso={lasso}
           brightness={brightness}
+          isGlobalEdit={isGlobalEdit}
+          updateEditState={this.handleEditState}
         />
         <RangeSlider
           name='brightness'
@@ -39,6 +49,9 @@ export default class DrawingBoard extends Component {
           value={this.state.brightness}
           onSliderMove={this.updateBrightness}
         />
+        {!isGlobalEdit
+          ? <button onClick={() => this.handleEditState(true)}>Done</button>
+          : ''}
       </div >
     );
   }

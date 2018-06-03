@@ -27,9 +27,19 @@ export const initImageTexture = (gl, image) => {
   return texture;
 };
 
-export const clear = (gl) => {
+export const clearCanvas = (gl) => {
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+export const clearGLData = (gl, program) => {
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.deleteProgram(program);
 }
 
 const compileShader = (gl, type, src) => {
@@ -99,9 +109,19 @@ var initSelectionTexture = (gl) => {
   return selectionTexture;
 }
 
-export const updateSelectionState = (gl, program, selectionState) => {
+export const updateSelectionStateUniform = (gl, program, selectionState) => {
   const uSelectionState = gl.getUniformLocation(program, 'uSelectionState');
   gl.uniform1i(uSelectionState, selectionState);
+}
+
+export const updateBrightnessUniform = (gl, program, brightness) => {
+  const uBrightness = gl.getUniformLocation(program, 'uBrightness');
+  gl.uniform1f(uBrightness, brightness);
+}
+
+export const updateEditStateUniform = (gl, program, isGlobalEdit) => {
+  const uIsGlobalEdit = gl.getUniformLocation(program, 'uIsGlobalEdit');
+  gl.uniform1i(uIsGlobalEdit, isGlobalEdit);
 }
 
 export const setupShaders = (gl) => {

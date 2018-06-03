@@ -5,11 +5,14 @@ import BackdropImg from '../backdrop.png';
 import {
   initImageTexture,
   setupShaders,
-  clear,
+  clearCanvas,
   draw,
   drawSelectionToTexture,
   drawTexture,
-  updateSelectionState
+  updateSelectionStateUniform,
+  updateBrightnessUniform,
+  clearGLData,
+  updateEditStateUniform
 } from './CanvasOperations';
 
 import Utils from './Utils';
@@ -17,6 +20,7 @@ import Utils from './Utils';
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio || 1;
 
 const selectionStateEnum = {
+  NOT_SELECTED: 0,
   SELECTION_PROCESSING: 1,
   SELECTED: 2
 }
@@ -27,7 +31,8 @@ export default class Canvas extends Component {
     glContext: null,
     imageTexture: null,
     shaderProgram: null,
-    boundingRect: null
+    boundingRect: null,
+    isGlobalEdit: true
   }
   canvasElement = React.createRef();
 
@@ -42,20 +47,22 @@ export default class Canvas extends Component {
   }
 
   updateCanvasContent = () => {
-    clear(this.state.glContext);
+    clearCanvas(this.state.glContext);
     draw(this.state.glContext, this.state.imageTexture);
   }
 
   handleMouseDown = (e) => {
     const { canvas, glContext, shaderProgram, boundingRect } = this.state;
-    const { Lasso } = this.props;
+    const { Lasso, updateEditState } = this.props;
     const mousePosition = {
       x: (e.clientX - boundingRect.left) / canvas.width * DEVICE_PIXEL_RATIO - 1,
       y: -((e.clientY - boundingRect.top) / canvas.height * DEVICE_PIXEL_RATIO - 1)
     }
     Lasso.onMouseDown(mousePosition.x, mousePosition.y);
 
-    updateSelectionState(glContext,
+    updateEditState(false); // updates isGlobalEdit
+
+    updateSelectionStateUniform(glContext,
       shaderProgram,
       selectionStateEnum.SELECTION_PROCESSING);
   }
@@ -68,17 +75,20 @@ export default class Canvas extends Component {
       y: -((e.clientY - boundingRect.top) / canvas.height * DEVICE_PIXEL_RATIO - 1)
     }
     Lasso.onMouseMove(mousePosition.x, mousePosition.y);
-    const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
-      .map(point => {
-        return [point.x, point.y];
-      }));
-    let rTT = drawSelectionToTexture(glContext, selectionPoints);
-    drawTexture(glContext, rTT);
+
+    if (Lasso.isMouseDown) {
+      const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
+        .map(point => {
+          return [point.x, point.y];
+        }));
+      let rTT = drawSelectionToTexture(glContext, selectionPoints);
+      drawTexture(glContext, rTT);
+    }
   }
 
   handleMouseUp = (e) => {
     const { canvas, boundingRect, glContext, shaderProgram } = this.state;
-    const { Lasso } = this.props;
+    const { Lasso, updateEditState } = this.props;
 
     const mousePosition = {
       x: (e.clientX - boundingRect.left) / canvas.width * DEVICE_PIXEL_RATIO - 1,
@@ -86,15 +96,24 @@ export default class Canvas extends Component {
     }
     Lasso.onMouseUp(mousePosition.x, mousePosition.y);
 
-    updateSelectionState(glContext,
-      shaderProgram,
-      selectionStateEnum.SELECTED);
+    if (Lasso.getIsSelectionComplete()) {
+      updateSelectionStateUniform(glContext,
+        shaderProgram,
+        selectionStateEnum.SELECTED);
 
-    const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
-      .map(point => {
-        return [point.x, point.y];
-      }));
-    drawSelectionToTexture(glContext, selectionPoints);
+      const selectionPoints = Utils.concatAll(Lasso.getMousePositions()
+        .map(point => {
+          return [point.x, point.y];
+        }));
+      let rTT = drawSelectionToTexture(glContext, selectionPoints);
+      drawTexture(glContext, rTT);
+    } else {
+      Lasso.resetMousePositions();
+      clearCanvas(glContext);
+      updateSelectionStateUniform(glContext, shaderProgram, selectionStateEnum.NOT_SELECTED);
+      updateEditState(true); // updates isGlobalEdit;
+      this.loadImageAsTexture();
+    }
   }
 
   componentDidMount() {
@@ -113,22 +132,21 @@ export default class Canvas extends Component {
       });
   }
 
+  // XXX:TODO if selection has been draw accordingly
   componentDidUpdate() {
     const { glContext, shaderProgram } = this.state;
-    const { brightness } = this.props;
+    const { brightness, isGlobalEdit } = this.props;
     if (!glContext || !shaderProgram) return;
-    // XXX:TODO abstract webgl calls out of the component, move to canvas operations
-    var uBrightness = glContext.getUniformLocation(shaderProgram, 'uBrightness');
-    glContext.uniform1f(uBrightness, brightness);
-    this.updateCanvasContent();
+
+    updateBrightnessUniform(glContext, shaderProgram, brightness);
+    updateEditStateUniform(glContext, shaderProgram, isGlobalEdit);
+
+    glContext.drawArrays(glContext.TRIANGLES, 0, 3);
   }
 
   componentWillUnmount() {
-    // XXX:TODO clean up the glContext
     const { shaderProgram, glContext } = this.state;
-    glContext.bindTexture(glContext.TEXTURE_2D, null);
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, null);
-    glContext.deleteProgram(shaderProgram);
+    clearGLData(glContext, shaderProgram);
   }
 
   render() {
